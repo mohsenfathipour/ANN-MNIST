@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inside an Artificial Neural Network</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f0f0f8;
+      --card:        #ffffff;
+      --card-deep:   #f6f6fc;
+      --border:      #e0e0ee;
+      --border-hi:   #c4c4dc;
+      --text:        #18182e;
+      --text-dim:    #9898b8;
+      --text-muted:  #5a5a80;
+      --accent:      #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.18);
+      --accent-dim:  rgba(99, 102, 241, 0.08);
+      --purple:      #a855f7;
+      --green:       #10b981;
+      --radius:      12px;
+      --shadow:      0 1px 3px rgba(80,80,140,0.06), 0 6px 18px rgba(80,80,140,0.08);
+    }
+
+    html { font-size: 14px; }
+
+    body {
+      min-height: 100svh;
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 15% 10%, rgba(99,102,241,0.07) 0%, transparent 45%),
+        radial-gradient(circle at 85% 90%, rgba(168,85,247,0.05) 0%, transparent 45%);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+      gap: 20px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 1160px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+      border-radius: 9px;
+      display: grid; place-items: center;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 16px var(--accent-glow);
+      flex-shrink: 0;
+    }
+    .logo-name  { font-size: 1rem; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .logo-sub   { font-size: 0.68rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .legend {
+      display: flex; align-items: center; gap: 14px;
+      font-size: 0.72rem; color: var(--text-muted);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-line {
+      width: 18px; height: 2px; border-radius: 1px;
+    }
+    .legend-line.pos { background: var(--purple); }
+    .legend-line.neg { background: var(--green); }
+
+    .chip {
+      font-size: 0.68rem; font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.03em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 999px;
+      padding: 5px 13px;
+      white-space: nowrap;
+    }
+
+    /* ── Workspace: 3-column grid ── */
+    .workspace {
+      width: 100%;
+      max-width: 1160px;
+      display: grid;
+      grid-template-columns: 262px 1fr 290px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ── Generic card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 15px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card-deep);
+    }
+
+    .step-badge {
+      width: 21px; height: 21px; flex-shrink: 0;
+      background: var(--accent-dim);
+      border: 1.5px solid rgba(99,102,241,0.4);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      font-size: 0.65rem; font-weight: 700; color: var(--accent);
+    }
+    .step-badge.sigma {
+      font-size: 0.8rem; font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      border-color: rgba(16,185,129,0.4);
+      color: var(--green);
+      background: rgba(16,185,129,0.07);
+    }
+
+    .card-title {
+      font-size: 0.73rem; font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      flex: 1;
+    }
+
+    .card-tag {
+      font-size: 0.65rem; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .card-body { padding: 14px; }
+
+    /* ── LEFT COL ── */
+    .col-left { display: flex; flex-direction: column; gap: 16px; }
+
+    #drawCanvas {
+      width: 100%; aspect-ratio: 1/1;
+      background: #111;
+      border: 1.5px solid var(--border-hi);
+      border-radius: 8px;
+      cursor: crosshair;
+      display: block;
+    }
+
+    .canvas-hint {
+      text-align: center;
+      font-size: 0.68rem; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 9px;
+    }
+
+    #clearBtn {
+      width: 100%; margin-top: 10px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem; font-weight: 600;
+      color: var(--text-muted);
+      background: var(--card-deep);
+      border: 1.5px solid var(--border); border-radius: 7px;
+      padding: 10px; cursor: pointer; transition: all 0.2s;
+    }
+    #clearBtn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    /* Pipeline */
+    .pipeline { display: flex; flex-direction: column; gap: 0; }
+
+    .pipe-step {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 11px;
+      background: var(--card-deep);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .pipe-icon { font-size: 1rem; width: 22px; text-align: center; flex-shrink: 0; }
+    .pipe-info { flex: 1; min-width: 0; }
+    .pipe-name { font-size: 0.75rem; font-weight: 600; color: var(--text); }
+    .pipe-desc {
+      font-size: 0.63rem; color: var(--text-dim); margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pipe-arrow {
+      text-align: center; font-size: 0.85rem;
+      color: var(--text-dim); padding: 3px 0;
+      padding-left: 32px;
+    }
+
+    #processedCanvas {
+      width: 42px; height: 42px; flex-shrink: 0;
+      background: #111;
+      border: 1.5px solid var(--border-hi);
+      image-rendering: pixelated; border-radius: 4px;
+    }
+
+    /* ── CENTER COL ── */
+    .col-center { display: flex; flex-direction: column; }
+
+    .net-wrap {
+      background: var(--bg);
+      padding: 4px 4px 0;
+    }
+
+    #netSvg { width: 100%; display: block; }
+
+    .net-stats {
+      display: flex; justify-content: space-around;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      gap: 8px;
+      background: var(--card-deep);
+    }
+
+    .stat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .stat-val {
+      font-size: 1rem; font-weight: 700; color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-lbl {
+      font-size: 0.6rem; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      text-align: center;
+    }
+
+    /* ── RIGHT COL ── */
+    .col-right { display: flex; flex-direction: column; gap: 16px; }
+
+    .pred-body {
+      display: flex; align-items: center; gap: 14px;
+      padding: 15px;
+    }
+
+    .pred-badge {
+      width: 72px; height: 72px; flex-shrink: 0;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent) 0%, #581c87 100%);
+      box-shadow: 0 6px 22px var(--accent-glow);
+      display: grid; place-items: center;
+      font-size: 2.6rem; font-weight: 700; color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.3s ease;
+    }
+    .pred-badge.empty {
+      background: var(--card-deep);
+      box-shadow: none;
+      border: 1.5px dashed var(--border-hi);
+      font-size: 1.6rem;
+      color: var(--text-dim);
+    }
+
+    .pred-meta { flex: 1; min-width: 0; }
+    .pred-conf { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+    .pred-conf em { font-style: normal; color: var(--accent); }
+    .pred-desc { font-size: 0.68rem; color: var(--text-muted); line-height: 1.6; margin-top: 5px; }
+
+    /* Softmax bars */
+    .bars-empty {
+      padding: 24px 14px; text-align: center;
+      font-size: 0.72rem; color: var(--text-dim); line-height: 1.7;
+    }
+
+    .bars-list {
+      padding: 6px 14px 14px;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+
+    .bar-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 7px; border-radius: 7px;
+      border: 1px solid transparent;
+      transition: background 0.25s, border-color 0.25s;
+    }
+    .bar-row.winner {
+      background: rgba(99,102,241,0.06);
+      border-color: rgba(99,102,241,0.2);
+    }
+
+    .bar-digit {
+      font-size: 0.8rem; font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      width: 14px; text-align: center;
+      color: var(--text-dim);
+    }
+    .bar-row.winner .bar-digit { color: var(--accent); }
+
+    .bar-track {
+      flex: 1; height: 6px;
+      background: var(--card-deep);
+      border: 1px solid var(--border);
+      border-radius: 3px; overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%; width: 0%;
+      background: rgba(99,102,241,0.3);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .bar-row.winner .bar-fill {
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+    }
+
+    .bar-pct {
+      font-size: 0.68rem; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      width: 36px; text-align: right;
+    }
+    .bar-row.winner .bar-pct { color: var(--text); font-weight: 700; }
+
+    /* Footer */
+    footer {
+      color: var(--text-dim); font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.12em; text-align: center;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 960px) {
+      .workspace { grid-template-columns: 1fr 1fr; }
+      .col-center { grid-column: 1 / -1; order: -1; }
+    }
+    @media (max-width: 600px) {
+      .workspace { grid-template-columns: 1fr; }
+      .col-center { order: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <div class="logo-mark">🧠</div>
+      <div>
+        <div class="logo-name">Neural Network Sandbox</div>
+        <div class="logo-sub">MNIST Digit Classifier · MLP · Live Inference</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-line pos"></div>
+          Positive Weights
+        </div>
+        <div class="legend-item">
+          <div class="legend-line neg"></div>
+          Negative Weights
+        </div>
+      </div>
+      <div class="chip">Interactive Explainer · MNIST</div>
+    </div>
+  </header>
+
+  <main class="workspace">
+
+    <!-- ── LEFT: Draw + Pipeline ── -->
+    <div class="col-left">
+
+      <div class="card">
+        <div class="card-head">
+          <div class="step-badge">1</div>
+          <span class="card-title">Draw Input Digit</span>
+        </div>
+        <div class="card-body">
+          <canvas id="drawCanvas" width="280" height="280"></canvas>
+          <div class="canvas-hint">28 × 28 pixel grid — draw any digit 0–9</div>
+          <button id="clearBtn">Clear Canvas</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="step-badge">2</div>
+          <span class="card-title">Preprocessing Pipeline</span>
+        </div>
+        <div class="card-body">
+          <div class="pipeline">
+
+            <div class="pipe-step">
+              <div class="pipe-icon">📥</div>
+              <div class="pipe-info">
+                <div class="pipe-name">Raw Input</div>
+                <div class="pipe-desc">28 × 28 = 784 pixel values (0–1)</div>
+              </div>
+            </div>
+
+            <div class="pipe-arrow">↓</div>
+
+            <div class="pipe-step">
+              <div class="pipe-icon">✂️</div>
+              <div class="pipe-info">
+                <div class="pipe-name">Center &amp; Crop</div>
+                <div class="pipe-desc">Bounding box + scale to 20 × 20</div>
+              </div>
+            </div>
+
+            <div class="pipe-arrow">↓</div>
+
+            <div class="pipe-step">
+              <div class="pipe-icon">🗜️</div>
+              <div class="pipe-info">
+                <div class="pipe-name">Avg Pool 2 × 2</div>
+                <div class="pipe-desc">→ 14 × 14 = 196 features + 1 bias</div>
+              </div>
+              <canvas id="processedCanvas" width="14" height="14"></canvas>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── CENTER: Network Visualization ── -->
+    <div class="col-center card">
+      <div class="card-head">
+        <div class="step-badge">3</div>
+        <span class="card-title">Feedforward Propagation</span>
+        <span class="card-tag">196 → 100 → 10</span>
+      </div>
+      <div class="net-wrap">
+        <svg id="netSvg" viewBox="0 0 580 340" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="net-stats">
+        <div class="stat">
+          <span class="stat-val" id="stat-active">—</span>
+          <span class="stat-lbl">Active<br>Neurons</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val" id="stat-maxact">—</span>
+          <span class="stat-lbl">Max<br>Activation</span>
+        </div>
+        <div class="stat">
+          <span class="stat-val" id="stat-conf">—</span>
+          <span class="stat-lbl">Softmax<br>Confidence</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT: Prediction + Softmax Bars ── -->
+    <div class="col-right">
+
+      <div class="card">
+        <div class="card-head">
+          <div class="step-badge">4</div>
+          <span class="card-title">Network Prediction</span>
+        </div>
+        <div class="pred-body">
+          <div class="pred-badge empty" id="pred-badge">?</div>
+          <div class="pred-meta">
+            <div class="pred-conf" id="pred-conf">Awaiting input</div>
+            <div class="pred-desc" id="pred-desc">Draw a digit on the canvas to trigger forward propagation.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="step-badge sigma">σ</div>
+          <span class="card-title">Softmax Distribution</span>
+        </div>
+        <div class="bars-empty" id="bars-empty">Draw a digit to see<br>the probability distribution</div>
+        <div class="bars-list" id="bars-list" style="display:none;"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer><a href="https://mohsenfathipour.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--border-hi);">mohsenfathipour.com</a> · MULTILAYER PERCEPTRON (MLP) · MNIST VISUALIZATION</footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="model-weights.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
