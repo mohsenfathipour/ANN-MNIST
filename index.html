@@ -97,6 +97,25 @@
       white-space: nowrap;
     }
 
+    .header-link a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1.5px solid rgba(99,102,241,0.25);
+      border-radius: 999px;
+      padding: 8px 14px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .header-link a:hover {
+      background: rgba(99,102,241,0.14);
+    }
+
     /* ── Workspace: 3-column grid ── */
     .workspace {
       width: 100%;
@@ -371,6 +390,7 @@
           Negative Weights
         </div>
       </div>
+      <div class="header-link"><a href="https://github.com/mohsenfathipour/ANN-MNIST" target="_blank" rel="noopener">GitHub repo</a></div>
       <div class="chip">Interactive Explainer · MNIST</div>
     </div>
   </header>

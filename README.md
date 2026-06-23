@@ -4,8 +4,12 @@
 
 **Live demo:**
 
-- 🌐 English version: [ann.mohsenfathipour.com](https://ann.mohsenfathipour.com)
-- 🇮🇷 Farsi version: [ann-fa.mohsenfathipour.com](https://ann-fa.mohsenfathipour.com)
+- 🌐 English version: [ann-mnist.mohsenfathipour.com](https://ann-mnist.mohsenfathipour.com/)
+- 🇮🇷 Farsi version: [ann-mnist-farsi.mohsenfathipour.com](https://ann-mnist-farsi.mohsenfathipour.com/)
+
+**GitHub repo:**
+
+- [mohsenfathipour/ANN-MNIST](https://github.com/mohsenfathipour/ANN-MNIST)
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-6366f1.svg)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES6-f7df1e.svg)
